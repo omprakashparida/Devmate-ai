@@ -37,13 +37,10 @@ export const registerUser = async (req, res) => {
 
 export const loginUser = async (req, res) => {
   try {
-    console.log(req.body);
 
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });
-
-    console.log(user);
 
     if (user && (await bcrypt.compare(password, user.password))) {
       return res.json({
@@ -67,5 +64,9 @@ export const loginUser = async (req, res) => {
 };
 
 export const getMe = async (req, res) => {
-  res.status(200).json(req.user);
+  res.json({
+    _id: req.user._id,
+    username: req.user.username,
+    email: req.user.email,
+  });
 };

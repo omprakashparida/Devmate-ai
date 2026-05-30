@@ -23,6 +23,15 @@ const roomSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    isActive: {
+        type: Boolean,
+        default: true,
+      },
+      
+      lastActivity: {
+        type: Date,
+        default: Date.now,
+      },
   },
   {
     timestamps: true,

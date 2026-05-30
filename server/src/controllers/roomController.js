@@ -69,3 +69,50 @@ export const joinRoom = async (req, res) => {
     });
   }
 };
+
+
+export const getMyRooms = async (req, res) => {
+  try {
+    const rooms = await Room.find({
+      owner: req.user._id,
+      isActive: true,
+    }).sort({
+      createdAt: -1,
+    });
+
+    res.json(rooms);
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+
+
+export const deactivateRoom = async (req, res) => {
+  try {
+    const room = await Room.findOne({
+      roomId: req.params.roomId,
+      owner: req.user._id,
+    });
+
+    if (!room) {
+      return res.status(404).json({
+        message: "Room not found",
+      });
+    }
+
+    room.isActive = false;
+
+    await room.save();
+
+    res.json({
+      message: "Room archived",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};

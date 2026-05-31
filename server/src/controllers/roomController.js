@@ -71,23 +71,24 @@ export const joinRoom = async (req, res) => {
 };
 
 
-export const getMyRooms = async (req, res) => {
-  try {
-    const rooms = await Room.find({
-      owner: req.user._id,
-      isActive: true,
-    }).sort({
-      createdAt: -1,
-    });
+export const getMyRooms =
+  async (req, res) => {
+    try {
+      const rooms =
+        await Room.find({
+          owner: req.user._id,
+          isActive: true,
+        }).sort({
+          createdAt: -1,
+        });
 
-    res.json(rooms);
-  } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
-  }
-};
-
+      res.json(rooms);
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
+      });
+    }
+  };
 
 
 export const deactivateRoom = async (req, res) => {
@@ -185,6 +186,48 @@ export const updateLanguage =
 
       res.json({
         success: true,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message:
+          error.message,
+      });
+    }
+  };
+  
+  export const deleteRoom =
+  async (req, res) => {
+    try {
+      const room =
+        await Room.findOne({
+          roomId:
+            req.params.roomId,
+        });
+
+      if (!room) {
+        return res.status(404).json({
+          message:
+            "Room not found",
+        });
+      }
+
+      if (
+        room.owner.toString() !==
+        req.user._id.toString()
+      ) {
+        return res.status(403).json({
+          message:
+            "Not authorized",
+        });
+      }
+
+      room.isActive = false;
+
+      await room.save();
+
+      res.json({
+        message:
+          "Room deleted",
       });
     } catch (error) {
       res.status(500).json({

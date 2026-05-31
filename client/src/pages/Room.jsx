@@ -13,7 +13,7 @@ function Room() {
     const [connected, setConnected] = useState(false);
     const [review, setReview] = useState("");
     const [loadingReview, setLoadingReview] = useState(false);
-    
+
     // New state for the copy button feedback
     const [copied, setCopied] = useState(false);
 
@@ -114,6 +114,10 @@ function Room() {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
     };
+
+
+
+ 
 
     return (
         <div className="min-h-screen bg-zinc-950 text-zinc-300 font-sans relative selection:bg-blue-500/30">

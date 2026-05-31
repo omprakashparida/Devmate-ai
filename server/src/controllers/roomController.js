@@ -116,3 +116,80 @@ export const deactivateRoom = async (req, res) => {
     });
   }
 };
+
+export const saveCode = async (
+  req,
+  res
+) => {
+  try {
+    const { code } = req.body;
+
+    const room =
+      await Room.findOne({
+        roomId:
+          req.params.roomId,
+      });
+
+    if (!room) {
+      return res
+        .status(404)
+        .json({
+          message:
+            "Room not found",
+        });
+    }
+
+    room.code = code;
+
+    room.lastActivity =
+      new Date();
+
+    await room.save();
+
+    res.json({
+      success: true,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message:
+        error.message,
+    });
+  }
+};
+
+export const updateLanguage =
+  async (req, res) => {
+    try {
+      const { language } =
+        req.body;
+
+      const room =
+        await Room.findOne({
+          roomId:
+            req.params.roomId,
+        });
+
+      if (!room) {
+        return res
+          .status(404)
+          .json({
+            message:
+              "Room not found",
+          });
+      }
+
+      room.language =
+        language;
+
+      await room.save();
+
+      res.json({
+        success: true,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message:
+          error.message,
+      });
+    }
+  };

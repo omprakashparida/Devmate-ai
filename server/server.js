@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+dotenv.config();
 import http from "http";
 import { Server } from "socket.io";
 
@@ -7,7 +8,7 @@ import connectDB from "./src/config/db.js";
 
 import socketHandler from "./src/socket/socketHandler.js";
 
-dotenv.config();
+
 
 connectDB();
 

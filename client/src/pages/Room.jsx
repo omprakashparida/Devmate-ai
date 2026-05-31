@@ -14,6 +14,12 @@ function Room() {
 
     const [connected, setConnected] =
         useState(false);
+        const [review, setReview] =
+  useState("");
+
+const [loadingReview,
+  setLoadingReview] =
+  useState(false);
 
     useEffect(() => {
         socket.connect();
@@ -153,6 +159,30 @@ function Room() {
             );
     }, [language, roomId]);
 
+    const handleReview =
+  async () => {
+    try {
+      setLoadingReview(true);
+
+      const response =
+        await api.post(
+          "/ai/review",
+          {
+            code,
+            language,
+          }
+        );
+
+      setReview(
+        response.data.review
+      );
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoadingReview(false);
+    }
+  };
+
     return (
         <div>
             <h2>
@@ -168,6 +198,28 @@ function Room() {
                 Users Online:
                 {usersCount}
             </p>
+            <button
+  onClick={handleReview}
+>
+  Review Code
+</button>
+{loadingReview && (
+  <p>
+    Reviewing...
+  </p>
+)}
+
+{review && (
+  <div>
+    <h3>
+      AI Review
+    </h3>
+
+    <pre>
+      {review}
+    </pre>
+  </div>
+)}
             <select
                 value={language}
                 onChange={handleLanguageChange}

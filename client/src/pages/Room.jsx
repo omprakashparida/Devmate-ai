@@ -2,84 +2,54 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import api from "../services/api.js";
 import Editor from "@monaco-editor/react";
-
+import ReactMarkdown from "react-markdown";
 import socket from "../services/socket";
 
 function Room() {
     const { roomId } = useParams();
     const [usersCount, setUsersCount] = useState(1);
     const [language, setLanguage] = useState("javascript");
-    const [code, setCode] =
-        useState("// Start coding...");
-
-    const [connected, setConnected] =
-        useState(false);
-        const [review, setReview] =
-  useState("");
-
-const [loadingReview,
-  setLoadingReview] =
-  useState(false);
+    const [code, setCode] = useState("// Start coding...");
+    const [connected, setConnected] = useState(false);
+    const [review, setReview] = useState("");
+    const [loadingReview, setLoadingReview] = useState(false);
+    
+    // New state for the copy button feedback
+    const [copied, setCopied] = useState(false);
 
     useEffect(() => {
         socket.connect();
 
         socket.on("connect", () => {
             setConnected(true);
-
-            socket.emit(
-                "join-room",
-                roomId
-            );
+            socket.emit("join-room", roomId);
         });
 
-        socket.on(
-            "users-count",
-            (count) => {
-                setUsersCount(count);
-            }
-        );
+        socket.on("users-count", (count) => {
+            setUsersCount(count);
+        });
 
-        socket.on(
-            "receive-code",
-            (incomingCode) => {
-                setCode(incomingCode);
-            }
-        );
+        socket.on("receive-code", (incomingCode) => {
+            setCode(incomingCode);
+        });
 
-        socket.on(
-            "receive-language",
-            (incomingLanguage) => {
-                setLanguage(
-                    incomingLanguage
-                );
-            }
-        );
+        socket.on("receive-language", (incomingLanguage) => {
+            setLanguage(incomingLanguage);
+        });
 
         socket.on("disconnect", () => {
             setConnected(false);
         });
-        const fetchRoom =
-            async () => {
-                try {
-                    const response =
-                        await api.get(
-                            `/rooms/${roomId}`
-                        );
 
-                    setCode(
-                        response.data.code ||
-                        "// Start coding..."
-                    );
-
-                    setLanguage(
-                        response.data.language ||
-                        "javascript"
-                    );
-                } catch (error) {
-                    console.error(error);
-                }
-            };
+        const fetchRoom = async () => {
+            try {
+                const response = await api.get(`/rooms/${roomId}`);
+                setCode(response.data.code || "// Start coding...");
+                setLanguage(response.data.language || "javascript");
+            } catch (error) {
+                console.error(error);
+            }
+        };
 
         fetchRoom();
 
@@ -91,175 +61,227 @@ const [loadingReview,
     }, [roomId]);
 
     useEffect(() => {
-        const timeout =
-            setTimeout(
-                async () => {
-                    try {
-                        await api.put(
-                            `/rooms/${roomId}/code`,
-                            { code }
-                        );
-                    } catch (error) {
-                        console.error(
-                            error
-                        );
-                    }
-                },
-                2000
-            );
+        const timeout = setTimeout(async () => {
+            try {
+                await api.put(`/rooms/${roomId}/code`, { code });
+            } catch (error) {
+                console.error(error);
+            }
+        }, 2000);
 
-        return () =>
-            clearTimeout(
-                timeout
-            );
+        return () => clearTimeout(timeout);
     }, [code, roomId]);
 
-    const handleLanguageChange = (
-        e
-    ) => {
-        const selectedLanguage =
-            e.target.value;
-
-        setLanguage(
-            selectedLanguage
-        );
-
-        socket.emit(
-            "language-change",
-            {
-                roomId,
-                language:
-                    selectedLanguage,
-            }
-        );
-    };
     useEffect(() => {
-        const timeout =
-            setTimeout(
-                async () => {
-                    try {
-                        await api.put(
-                            `/rooms/${roomId}/language`,
-                            {
-                                language,
-                            }
-                        );
-                    } catch (error) {
-                        console.error(
-                            error
-                        );
-                    }
-                },
-                1000
-            );
+        const timeout = setTimeout(async () => {
+            try {
+                await api.put(`/rooms/${roomId}/language`, { language });
+            } catch (error) {
+                console.error(error);
+            }
+        }, 1000);
 
-        return () =>
-            clearTimeout(
-                timeout
-            );
+        return () => clearTimeout(timeout);
     }, [language, roomId]);
 
-    const handleReview =
-  async () => {
-    try {
-      setLoadingReview(true);
+    const handleLanguageChange = (e) => {
+        const selectedLanguage = e.target.value;
+        setLanguage(selectedLanguage);
+        socket.emit("language-change", {
+            roomId,
+            language: selectedLanguage,
+        });
+    };
 
-      const response =
-        await api.post(
-          "/ai/review",
-          {
-            code,
-            language,
-          }
-        );
+    const handleReview = async () => {
+        try {
+            setLoadingReview(true);
+            const response = await api.post("/ai/review", {
+                code,
+                language,
+            });
+            setReview(response.data.review);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoadingReview(false);
+        }
+    };
 
-      setReview(
-        response.data.review
-      );
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoadingReview(false);
-    }
-  };
+    // Copy to clipboard handler
+    const copyRoomId = () => {
+        navigator.clipboard.writeText(roomId);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
+    };
 
     return (
-        <div>
-            <h2>
-                Room: {roomId}
-            </h2>
+        <div className="min-h-screen bg-zinc-950 text-zinc-300 font-sans relative selection:bg-blue-500/30">
+            {/* Minimalist Dark Header */}
+            <header className="relative z-10 flex items-center justify-between px-6 py-4 bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-800">
+                <div className="flex items-center gap-5">
+                    <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-sm">
+                        DevMate AI
+                    </h1>
+                    <div className="h-5 w-[1px] bg-zinc-800 hidden sm:block"></div>
+                    
+                    {/* Room ID & Copy Button */}
+                    <div className="hidden sm:flex items-center gap-3">
+                        <span className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Room</span>
+                        <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-md overflow-hidden shadow-inner">
+                            <span className="text-sm font-mono text-zinc-300 px-3 py-1">
+                                {roomId}
+                            </span>
+                            <button 
+                                onClick={copyRoomId}
+                                className={`px-2.5 py-1.5 border-l border-zinc-800 transition-colors flex items-center justify-center ${
+                                    copied ? "bg-emerald-500/10 text-emerald-400" : "hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300"
+                                }`}
+                                title="Copy Room Code"
+                            >
+                                {copied ? (
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                ) : (
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
-            <p>
-                {connected
-                    ? "Connected"
-                    : "Disconnected"}
-            </p>
-            <p>
-                Users Online:
-                {usersCount}
-            </p>
-            <button
-  onClick={handleReview}
->
-  Review Code
-</button>
-{loadingReview && (
-  <p>
-    Reviewing...
-  </p>
-)}
+                <div className="flex items-center gap-3 text-sm">
+                    {/* Status Badge */}
+                    <div
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-full font-medium border transition-colors ${
+                            connected
+                                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                : "bg-red-500/10 text-red-400 border-red-500/20"
+                        }`}
+                    >
+                        <span className={`w-2 h-2 rounded-full ${connected ? "bg-emerald-400 animate-pulse" : "bg-red-500"}`}></span>
+                        {connected ? "Live" : "Offline"}
+                    </div>
 
-{review && (
-  <div>
-    <h3>
-      AI Review
-    </h3>
+                    {/* Users Badge */}
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        <span>{usersCount}</span>
+                    </div>
+                </div>
+            </header>
 
-    <pre>
-      {review}
-    </pre>
-  </div>
-)}
-            <select
-                value={language}
-                onChange={handleLanguageChange}
-            >
-                <option value="javascript">
-                    JavaScript
-                </option>
+            {/* Main Layout */}
+            <main className="relative z-10 p-4 lg:p-6 h-[calc(100vh-73px)]">
+                <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 h-full max-w-[1800px] mx-auto">
+                    
+                    {/* Editor Workspace */}
+                    <div className="flex-1 flex flex-col bg-zinc-900 rounded-2xl border border-zinc-800 shadow-xl overflow-hidden group">
+                        
+                        {/* Editor Toolbar */}
+                        <div className="flex items-center justify-between px-4 py-3 bg-zinc-900/50 border-b border-zinc-800">
+                            <div className="relative">
+                                <select
+                                    value={language}
+                                    onChange={handleLanguageChange}
+                                    className="appearance-none bg-zinc-800 text-zinc-200 border border-zinc-700 px-4 py-1.5 pr-8 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer transition-all hover:bg-zinc-700"
+                                >
+                                    <option value="javascript">JavaScript</option>
+                                    <option value="python">Python</option>
+                                    <option value="java">Java</option>
+                                    <option value="cpp">C++</option>
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-zinc-400">
+                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </div>
+                            </div>
 
-                <option value="python">
-                    Python
-                </option>
+                            <button
+                                onClick={handleReview}
+                                disabled={loadingReview}
+                                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {loadingReview ? (
+                                    <>
+                                        <svg className="animate-spin -ml-1 mr-1 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                        Analyzing...
+                                    </>
+                                ) : (
+                                    <>
+                                        Review Code
+                                    </>
+                                )}
+                            </button>
+                        </div>
 
-                <option value="java">
-                    Java
-                </option>
+                        {/* Editor Core */}
+                        <div className="flex-1 w-full relative">
+                            <Editor
+                                height="100%"
+                                language={language}
+                                theme="vs-dark"
+                                value={code}
+                                options={{
+                                    minimap: { enabled: false },
+                                    padding: { top: 20 },
+                                    fontSize: 15,
+                                    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                                    scrollBeyondLastLine: false,
+                                    smoothScrolling: true,
+                                    cursorBlinking: "smooth",
+                                }}
+                                onChange={(value) => {
+                                    setCode(value);
+                                    socket.emit("code-change", {
+                                        roomId,
+                                        code: value,
+                                    });
+                                }}
+                            />
+                        </div>
+                    </div>
 
-                <option value="cpp">
-                    C++
-                </option>
-            </select>
-            <Editor
+                    {/* AI Insights Sidebar */}
+                    <div className="w-full lg:w-[400px] xl:w-[450px] flex flex-col bg-zinc-900 rounded-2xl border border-zinc-800 shadow-xl overflow-hidden">
+                        <div className="flex items-center gap-2 px-5 py-4 bg-zinc-900/50 border-b border-zinc-800">
+                            <div className="p-1.5 bg-blue-500/20 rounded-md">
+                                <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                            </div>
+                            <h2 className="text-sm font-semibold text-zinc-200 tracking-wide">AI Insights</h2>
+                        </div>
+                        
+                        <div className="flex-1 overflow-auto p-5 text-sm leading-relaxed prose prose-invert prose-pre:bg-zinc-950 prose-pre:border prose-pre:border-zinc-800 prose-a:text-blue-400 max-w-none">
+                            {loadingReview ? (
+                                <div className="flex flex-col items-center justify-center h-full text-zinc-500 gap-4">
+                                    <div className="w-10 h-10 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
+                                    <p className="animate-pulse">Analyzing your code structure...</p>
+                                </div>
+                            ) : review ? (
+                                <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                    <ReactMarkdown>{review}</ReactMarkdown>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center h-full text-center text-zinc-500 px-4">
+                                    <div className="w-16 h-16 mb-4 rounded-full bg-zinc-800/50 flex items-center justify-center border border-zinc-700/50">
+                                        <span className="text-2xl opacity-50">🤖</span>
+                                    </div>
+                                    <p>Your AI assistant is resting.</p>
+                                    <p className="mt-1 text-xs text-zinc-600">Click "Review Code" to get suggestions, detect bugs, or refactor your logic.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
 
-                height="80vh"
-                language={language}
-                theme="vs-dark"
-                value={code}
-                onChange={(value) => {
-                    setCode(value);
-
-                    socket.emit(
-                        "code-change",
-                        {
-                            roomId,
-                            code: value,
-                        }
-                    );
-                }}
-            />
+                </div>
+            </main>
         </div>
-
     );
 }
 

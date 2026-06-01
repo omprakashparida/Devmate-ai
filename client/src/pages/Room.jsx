@@ -4,18 +4,26 @@ import api from "../services/api.js";
 import Editor from "@monaco-editor/react";
 import ReactMarkdown from "react-markdown";
 import socket from "../services/socket";
+import { useAuth } from "../context/AuthContext";
 
 function Room() {
     const { roomId } = useParams();
+    const { user } = useAuth();
+
     const [usersCount, setUsersCount] = useState(1);
     const [language, setLanguage] = useState("javascript");
     const [code, setCode] = useState("// Start coding...");
     const [connected, setConnected] = useState(false);
+    
+    // AI States
     const [review, setReview] = useState("");
     const [loadingReview, setLoadingReview] = useState(false);
 
-    // New state for the copy button feedback
+    // Chat & UI States
+    const [messages, setMessages] = useState([]);
+    const [message, setMessage] = useState("");
     const [copied, setCopied] = useState(false);
+    const [activeTab, setActiveTab] = useState("ai"); // "ai" or "chat"
 
     useEffect(() => {
         socket.connect();
@@ -37,6 +45,10 @@ function Room() {
             setLanguage(incomingLanguage);
         });
 
+        socket.on("receive-chat-message", (chatMessage) => {
+            setMessages((prev) => [...prev, chatMessage]);
+        });
+
         socket.on("disconnect", () => {
             setConnected(false);
         });
@@ -56,6 +68,7 @@ function Room() {
         return () => {
             socket.off("receive-code");
             socket.off("receive-language");
+            socket.off("receive-chat-message");
             socket.disconnect();
         };
     }, [roomId]);
@@ -68,7 +81,6 @@ function Room() {
                 console.error(error);
             }
         }, 2000);
-
         return () => clearTimeout(timeout);
     }, [code, roomId]);
 
@@ -80,7 +92,6 @@ function Room() {
                 console.error(error);
             }
         }, 1000);
-
         return () => clearTimeout(timeout);
     }, [language, roomId]);
 
@@ -96,10 +107,7 @@ function Room() {
     const handleReview = async () => {
         try {
             setLoadingReview(true);
-            const response = await api.post("/ai/review", {
-                code,
-                language,
-            });
+            const response = await api.post("/ai/review", { code, language });
             setReview(response.data.review);
         } catch (error) {
             console.error(error);
@@ -108,20 +116,28 @@ function Room() {
         }
     };
 
-    // Copy to clipboard handler
     const copyRoomId = () => {
         navigator.clipboard.writeText(roomId);
         setCopied(true);
-        setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
+        setTimeout(() => setCopied(false), 2000);
     };
 
-
-
- 
+    const sendMessage = () => {
+        if (!message.trim()) return;
+        
+        const chatData = {
+            roomId,
+            sender: user?.username || "Anonymous",
+            message,
+        };
+        
+        socket.emit("send-chat-message", chatData);
+        setMessage("");
+    };
 
     return (
         <div className="min-h-screen bg-zinc-950 text-zinc-300 font-sans relative selection:bg-blue-500/30">
-            {/* Minimalist Dark Header */}
+            {/* Minimalist Dark Header (Unchanged) */}
             <header className="relative z-10 flex items-center justify-between px-6 py-4 bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-800">
                 <div className="flex items-center gap-5">
                     <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-sm">
@@ -159,13 +175,9 @@ function Room() {
 
                 <div className="flex items-center gap-3 text-sm">
                     {/* Status Badge */}
-                    <div
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-full font-medium border transition-colors ${
-                            connected
-                                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                                : "bg-red-500/10 text-red-400 border-red-500/20"
-                        }`}
-                    >
+                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full font-medium border transition-colors ${
+                        connected ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-red-500/10 text-red-400 border-red-500/20"
+                    }`}>
                         <span className={`w-2 h-2 rounded-full ${connected ? "bg-emerald-400 animate-pulse" : "bg-red-500"}`}></span>
                         {connected ? "Live" : "Offline"}
                     </div>
@@ -180,14 +192,13 @@ function Room() {
                 </div>
             </header>
 
-            {/* Main Layout */}
+            {/* Main Layout (Unchanged Grid) */}
             <main className="relative z-10 p-4 lg:p-6 h-[calc(100vh-73px)]">
                 <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 h-full max-w-[1800px] mx-auto">
                     
-                    {/* Editor Workspace */}
+                    {/* Editor Workspace (Unchanged) */}
                     <div className="flex-1 flex flex-col bg-zinc-900 rounded-2xl border border-zinc-800 shadow-xl overflow-hidden group">
                         
-                        {/* Editor Toolbar */}
                         <div className="flex items-center justify-between px-4 py-3 bg-zinc-900/50 border-b border-zinc-800">
                             <div className="relative">
                                 <select
@@ -223,7 +234,6 @@ function Room() {
                             </button>
                         </div>
 
-                        {/* Editor Core */}
                         <div className="flex-1 w-full relative">
                             <Editor
                                 height="100%"
@@ -241,48 +251,118 @@ function Room() {
                                 }}
                                 onChange={(value) => {
                                     setCode(value);
-                                    socket.emit("code-change", {
-                                        roomId,
-                                        code: value,
-                                    });
+                                    socket.emit("code-change", { roomId, code: value });
                                 }}
                             />
                         </div>
                     </div>
 
-                    {/* AI Insights Sidebar */}
-                    <div className="w-full lg:w-[400px] xl:w-[450px] flex flex-col bg-zinc-900 rounded-2xl border border-zinc-800 shadow-xl overflow-hidden">
-                        <div className="flex items-center gap-2 px-5 py-4 bg-zinc-900/50 border-b border-zinc-800">
-                            <div className="p-1.5 bg-blue-500/20 rounded-md">
-                                <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    {/* NEW: Tabbed Sidebar (AI Insights + Chat) */}
+                    <div className="w-full lg:w-[400px] xl:w-[450px] flex flex-col bg-zinc-900 rounded-2xl border border-zinc-800 shadow-xl overflow-hidden shrink-0">
+                        
+                        {/* Tab Headers */}
+                        <div className="flex border-b border-zinc-800 bg-zinc-900/50">
+                            <button 
+                                onClick={() => setActiveTab("ai")}
+                                className={`flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-semibold transition-all ${
+                                    activeTab === "ai" 
+                                    ? "text-blue-400 border-b-2 border-blue-500 bg-zinc-800/30" 
+                                    : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/20"
+                                }`}
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                                 </svg>
-                            </div>
-                            <h2 className="text-sm font-semibold text-zinc-200 tracking-wide">AI Insights</h2>
+                                AI Insights
+                            </button>
+                            <button 
+                                onClick={() => setActiveTab("chat")}
+                                className={`flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-semibold transition-all ${
+                                    activeTab === "chat" 
+                                    ? "text-blue-400 border-b-2 border-blue-500 bg-zinc-800/30" 
+                                    : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/20"
+                                }`}
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                </svg>
+                                Room Chat
+                            </button>
                         </div>
-                        
-                        <div className="flex-1 overflow-auto p-5 text-sm leading-relaxed prose prose-invert prose-pre:bg-zinc-950 prose-pre:border prose-pre:border-zinc-800 prose-a:text-blue-400 max-w-none">
-                            {loadingReview ? (
-                                <div className="flex flex-col items-center justify-center h-full text-zinc-500 gap-4">
-                                    <div className="w-10 h-10 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
-                                    <p className="animate-pulse">Analyzing your code structure...</p>
-                                </div>
-                            ) : review ? (
-                                <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                                    <ReactMarkdown>{review}</ReactMarkdown>
-                                </div>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center h-full text-center text-zinc-500 px-4">
-                                    <div className="w-16 h-16 mb-4 rounded-full bg-zinc-800/50 flex items-center justify-center border border-zinc-700/50">
-                                        <span className="text-2xl opacity-50">🤖</span>
-                                    </div>
-                                    <p>Your AI assistant is resting.</p>
-                                    <p className="mt-1 text-xs text-zinc-600">Click "Review Code" to get suggestions, detect bugs, or refactor your logic.</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
 
+                        {/* TAB 1: AI Insights Content */}
+                        {activeTab === "ai" && (
+                            <div className="flex-1 overflow-auto p-5 text-sm leading-relaxed prose prose-invert prose-pre:bg-zinc-950 prose-pre:border prose-pre:border-zinc-800 prose-a:text-blue-400 max-w-none">
+                                {loadingReview ? (
+                                    <div className="flex flex-col items-center justify-center h-full text-zinc-500 gap-4">
+                                        <div className="w-10 h-10 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
+                                        <p className="animate-pulse">Analyzing your code structure...</p>
+                                    </div>
+                                ) : review ? (
+                                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                        <ReactMarkdown>{review}</ReactMarkdown>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-full text-center text-zinc-500 px-4">
+                                        <div className="w-16 h-16 mb-4 rounded-full bg-zinc-800/50 flex items-center justify-center border border-zinc-700/50">
+                                            <span className="text-2xl opacity-50">🤖</span>
+                                        </div>
+                                        <p>Your AI assistant is resting.</p>
+                                        <p className="mt-1 text-xs text-zinc-600">Click "Review Code" to get suggestions, detect bugs, or refactor your logic.</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* TAB 2: Real-time Chat Content */}
+                        {activeTab === "chat" && (
+                            <div className="flex-1 flex flex-col overflow-hidden bg-zinc-950/30">
+                                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                                    {messages.length === 0 ? (
+                                        <div className="h-full flex flex-col items-center justify-center text-center text-zinc-600">
+                                            <span className="text-2xl mb-2 opacity-50">💬</span>
+                                            <p className="text-sm">No messages yet.</p>
+                                        </div>
+                                    ) : (
+                                        messages.map((msg, index) => {
+                                            const isMe = msg.sender === user?.username;
+                                            return (
+                                                <div key={index} className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
+                                                    <span className="text-[11px] text-zinc-500 mb-1 px-1">{msg.sender}</span>
+                                                    <div className={`px-4 py-2.5 rounded-2xl text-sm max-w-[85%] break-words ${
+                                                        isMe 
+                                                        ? "bg-blue-600 text-white rounded-tr-sm" 
+                                                        : "bg-zinc-800 border border-zinc-700 text-zinc-200 rounded-tl-sm"
+                                                    }`}>
+                                                        {msg.message}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                                
+                                <div className="p-3 bg-zinc-900 border-t border-zinc-800 shrink-0">
+                                    <div className="relative flex items-center">
+                                        <input 
+                                            value={message} 
+                                            onChange={(e) => setMessage(e.target.value)} 
+                                            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                                            placeholder="Message team..." 
+                                            className="w-full bg-zinc-950 border border-zinc-700 rounded-xl pl-4 pr-12 py-2.5 text-sm text-zinc-200 focus:outline-none focus:border-blue-500 transition-colors"
+                                        />
+                                        <button 
+                                            onClick={sendMessage} 
+                                            className="absolute right-2 p-1.5 text-zinc-400 hover:text-blue-400 hover:bg-zinc-800 rounded-lg transition-colors"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9-2-9-11-9 11 9 2zm0 0v-8" /></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                    </div>
                 </div>
             </main>
         </div>

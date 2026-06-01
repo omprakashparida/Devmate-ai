@@ -79,7 +79,28 @@ const socketHandler = (io) => {
         }
       );
     });
+
+    socket.on(
+      "send-chat-message",
+      ({ roomId, message, sender }) => {
+
+        io.to(roomId).emit(
+          "receive-chat-message",
+          {
+            sender,
+            message,
+            createdAt:
+              Date.now(),
+          }
+        );
+
+      }
+    );
+
+
   });
 };
+
+
 
 export default socketHandler;

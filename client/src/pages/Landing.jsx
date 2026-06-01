@@ -1,49 +1,93 @@
-import { Link } from "react-router-dom";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { GoogleLogin } from "@react-oauth/google";
+
+import { useAuth } from "../context/AuthContext";
+import api from "../services/api";
 
 function Landing() {
+    const { user, login } = useAuth();
+    const navigate = useNavigate();
+
+    // Auto-redirect if already logged in
+    useEffect(() => {
+        if (user) {
+            navigate("/dashboard");
+        }
+    }, [user, navigate]);
+
+    // Your exact Google Success Handler
+    const handleGoogleSuccess = async (credentialResponse) => {
+        try {
+            const response = await api.post("/auth/google", {
+                credential: credentialResponse.credential,
+            });
+
+            login(
+                {
+                    _id: response.data._id,
+                    username: response.data.username,
+                    email: response.data.email,
+                },
+                response.data.token
+            );
+
+            navigate("/dashboard");
+        } catch (error) {
+            console.error("Authentication Error:", error);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-zinc-950 text-zinc-300 font-sans selection:bg-indigo-500/30 overflow-hidden relative">
-            
+
             {/* Background Grid & Glow */}
             <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
             <div className="absolute left-0 right-0 top-0 -z-10 m-auto h-[310px] w-[310px] rounded-full bg-indigo-500 opacity-20 blur-[100px]"></div>
 
-            {/* Navigation */}
+            {/* Clean Navigation (No extra login buttons) */}
             <nav className="relative z-50 flex items-center justify-between px-6 py-5 max-w-7xl mx-auto">
                 <div className="flex items-center gap-2">
                     <div className="w-8 h-8 bg-zinc-100 text-zinc-950 flex items-center justify-center font-bold text-lg rounded-md">D</div>
                     <span className="text-xl font-bold text-white tracking-tight">DevMate</span>
                 </div>
-                <div className="flex items-center gap-5 text-sm font-medium">
-                    <Link to="/login" className="text-zinc-400 hover:text-white transition-colors">Log in</Link>
-                    <Link to="/register" className="bg-white text-zinc-950 hover:bg-zinc-200 px-4 py-2 rounded-lg shadow-[0_0_15px_rgba(255,255,255,0.1)] transition-all">
-                        Get Started <span className="ml-1 opacity-50">→</span>
-                    </Link>
-                </div>
+                
             </nav>
 
             {/* Spatial Hero Section */}
-            <header className="relative z-10 max-w-7xl mx-auto px-6 pt-20 pb-32 text-center group perspective-1000">
+            <header className="relative z-10 max-w-7xl mx-auto px-6 pt-16 pb-32 text-center group perspective-1000">
                 <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-white mb-6">
                     Multiplayer coding. <br className="hidden md:block" />
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-zinc-400 to-zinc-600">
                         AI supercharged.
                     </span>
                 </h1>
-                <p className="text-lg text-zinc-500 max-w-xl mx-auto mb-12">
+                <p className="text-lg text-zinc-500 max-w-xl mx-auto mb-10">
                     Drop into a collaborative workspace in seconds. Sync logic, review architecture with AI, and ship faster together.
                 </p>
 
+                {/* THE GOOGLE LOGIN BUTTON */}
+                {/* Primary Google Auth CTA - Added z-50 and relative positioning */}
+                <div className="relative z-50 flex justify-center mb-12 mt-2">
+                    <GoogleLogin
+                        onSuccess={handleGoogleSuccess}
+                        onError={() => console.log("Login Failed")}
+                        theme="filled_black"
+                        shape="pill"
+                        size="large"
+                        text="continue_with"
+                    />
+                </div>
                 {/* Floating 3D Cards Visual */}
-                <div className="relative w-full max-w-4xl mx-auto h-[400px] flex items-center justify-center mt-12 cursor-default">
-                    
+                <div className="relative w-full max-w-4xl mx-auto h-[400px] flex items-center justify-center cursor-default">
+
                     {/* Left Card: Raw Code (Rotated Left) */}
                     <div className="absolute hidden md:block w-72 h-80 bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-2xl p-5 shadow-2xl transition-all duration-700 ease-out transform -translate-x-48 rotate-[-12deg] translate-y-8 opacity-60 group-hover:rotate-[-16deg] group-hover:-translate-x-56 group-hover:opacity-40">
                         <div className="flex gap-1.5 mb-4">
                             <div className="w-2.5 h-2.5 rounded-full bg-zinc-700"></div>
                             <div className="w-2.5 h-2.5 rounded-full bg-zinc-700"></div>
                         </div>
-                        <div className="font-mono text-xs text-indigo-300 space-y-2 opacity-70">
+                        <div className="font-mono text-xs text-indigo-300 space-y-2 opacity-70 text-left">
                             <p>function calculate() {"{"}</p>
                             <p className="pl-4">let x = 10;</p>
                             <p className="pl-4 text-rose-400">return x * y; // Error</p>
@@ -56,7 +100,7 @@ function Landing() {
                         <div className="flex items-center gap-2 mb-4 border-b border-zinc-800 pb-3 text-emerald-400">
                             <span className="text-sm">✨ AI Suggestion</span>
                         </div>
-                        <div className="text-sm text-zinc-400 leading-relaxed">
+                        <div className="text-sm text-zinc-400 leading-relaxed text-left">
                             Variable <code className="bg-zinc-800 px-1 rounded text-rose-300">y</code> is not defined. Consider passing it as a parameter to the function.
                         </div>
                     </div>
@@ -73,20 +117,20 @@ function Landing() {
                                 </div>
                             </div>
                             {/* Fake Editor Body */}
-                            <div className="flex-1 p-4 font-mono text-sm leading-loose relative">
+                            <div className="flex-1 p-4 font-mono text-sm leading-loose relative text-left">
                                 <div className="text-zinc-400"><span className="text-indigo-400">export const</span> <span className="text-blue-300">Room</span> = () <span className="text-indigo-400">=&gt;</span> {"{"}</div>
                                 <div className="pl-6 text-zinc-400">
                                     <span className="text-indigo-400">const</span> [code, setCode] = <span className="text-emerald-300">useState</span>(<span className="text-amber-300">""</span>);
                                 </div>
                                 <div className="pl-6 mt-4 text-zinc-500">// Your cursor is here</div>
                                 <div className="text-zinc-400">{"}"}</div>
-                                
+
                                 {/* Fake Cursor */}
                                 <div className="absolute top-[102px] left-[48px] w-0.5 h-4 bg-indigo-500 animate-pulse"></div>
                             </div>
                         </div>
                     </div>
-                    
+
                 </div>
             </header>
 

@@ -1,72 +1,94 @@
 import User from "../models/User.js";
-import bcrypt from "bcryptjs";
 import generateToken from "../utils/generateToken.js";
+import { OAuth2Client } from "google-auth-library";
 
-export const registerUser = async (req, res) => {
-  try {
-    const { username, email, password } = req.body;
+const client =
+  new OAuth2Client(
+    process.env.GOOGLE_CLIENT_ID
+  );
 
-    const existingUser = await User.findOne({ email });
-
-    if (existingUser) {
-      return res.status(400).json({
-        message: "User already exists",
-      });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = await User.create({
-      username,
-      email,
-      password: hashedPassword,
+export const getMe =
+  async (req, res) => {
+    res.json({
+      _id: req.user._id,
+      username:
+        req.user.username,
+      email:
+        req.user.email,
+      avatar:
+        req.user.avatar,
     });
+  };
 
-    res.status(201).json({
-      _id: user._id,
-      username: user.username,
-      email: user.email,
-      token: generateToken(user._id),
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
-  }
-};
+export const googleLogin =
+  async (req, res) => {
+    try {
 
-export const loginUser = async (req, res) => {
-  try {
+      const {
+        credential,
+      } = req.body;
 
-    const { email, password } = req.body;
+      const ticket =
+        await client.verifyIdToken({
+          idToken:
+            credential,
+          audience:
+            process.env
+              .GOOGLE_CLIENT_ID,
+        });
 
-    const user = await User.findOne({ email });
+      const payload =
+        ticket.getPayload();
 
-    if (user && (await bcrypt.compare(password, user.password))) {
-      return res.json({
+      const {
+        sub,
+        email,
+        name,
+        picture,
+      } = payload;
+
+      let user =
+        await User.findOne({
+          email,
+        });
+
+      if (!user) {
+
+        user =
+          await User.create({
+            username:
+              name,
+            email,
+            googleId:
+              sub,
+            avatar:
+              picture,
+          });
+
+      }
+
+      res.json({
         _id: user._id,
-        username: user.username,
-        email: user.email,
-        token: generateToken(user._id),
+        username:
+          user.username,
+        email:
+          user.email,
+        avatar:
+          user.avatar,
+        token:
+          generateToken(
+            user._id
+          ),
       });
+
+    } catch (error) {
+
+      console.error(error);
+
+      res.status(500).json({
+        message:
+          "Google login failed",
+      });
+
     }
-
-    return res.status(401).json({
-      message: "Invalid credentials",
-    });
-  } catch (error) {
-    console.error(error);
-
-    return res.status(500).json({
-      message: error.message,
-    });
-  }
-};
-
-export const getMe = async (req, res) => {
-  res.json({
-    _id: req.user._id,
-    username: req.user.username,
-    email: req.user.email,
-  });
-};
+  };

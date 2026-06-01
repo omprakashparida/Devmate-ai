@@ -1,11 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-
 import ProtectedRoute from "./components/ProtectedRoute";
-
-// Import all your pages
-import Landing from "./pages/Landing"; // Add the new Landing page
-import Login from "./pages/Login";
-import Register from "./pages/Register";
+import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
 import Room from "./pages/Room";
 
@@ -20,15 +15,6 @@ function App() {
           element={<Landing />} 
         />
         
-        <Route 
-          path="/login" 
-          element={<Login />} 
-        />
-        
-        <Route 
-          path="/register" 
-          element={<Register />} 
-        />
 
         {/* Protected Routes (Require Authentication) */}
         <Route

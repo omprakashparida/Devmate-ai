@@ -200,7 +200,7 @@ function Room() {
     return (
         <div className="min-h-screen bg-zinc-950 text-zinc-300 font-sans relative selection:bg-blue-500/30">
             {/* Minimalist Dark Header */}
-            <header className="relative z-10 flex items-center justify-between px-6 py-4 bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-800">
+            <header className="relative z-10 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 sm:px-6 py-3 sm:py-4 bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-800">
                 <div className="flex items-center gap-5">
                     <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-sm">
                         DevMate AI
@@ -254,10 +254,10 @@ function Room() {
 
             {/* Main Layout */}
             <main className="relative z-10 p-4 lg:p-6 h-[calc(100vh-73px)]">
-                <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 h-full max-w-[1800px] mx-auto">
+                <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 h-full max-w-[1800px] mx-auto min-h-0">
 
                     {/* Editor Workspace */}
-                    <div className="flex-1 flex flex-col bg-zinc-900 rounded-2xl border border-zinc-800 shadow-xl overflow-hidden group">
+                    <div className="flex-1 flex flex-col bg-zinc-900 rounded-2xl border border-zinc-800 shadow-xl overflow-hidden group min-h-0">
 
                         <div className="flex items-center justify-between px-4 py-3 bg-zinc-900/50 border-b border-zinc-800">
                             <div className="relative">
@@ -294,7 +294,7 @@ function Room() {
                             </button>
                         </div>
 
-                        <div className="flex-1 w-full relative">
+                        <div className="flex-1 w-full relative min-h-0">
                             <Editor
                                 height="100%"
                                 language={language}
@@ -318,7 +318,7 @@ function Room() {
                     </div>
 
                     {/* Tabbed Sidebar */}
-                    <div className="w-full lg:w-[400px] xl:w-[450px] flex flex-col bg-zinc-900 rounded-2xl border border-zinc-800 shadow-xl overflow-hidden shrink-0">
+                    <div className="w-full lg:w-[400px] xl:w-[450px] flex flex-col bg-zinc-900 rounded-2xl border border-zinc-800 shadow-xl overflow-hidden flex-1 lg:flex-none min-h-0">
 
                         {/* Tab Headers */}
                         <div className="flex border-b border-zinc-800 bg-zinc-900/50">
@@ -353,7 +353,7 @@ function Room() {
 
                         {/* TAB 1: AI Insights Content */}
                         {activeTab === "ai" && (
-                            <div className="flex-1 overflow-auto p-5 text-sm leading-relaxed prose prose-invert prose-pre:bg-zinc-950 prose-pre:border prose-pre:border-zinc-800 prose-a:text-blue-400 max-w-none">
+                            <div className="flex-1 overflow-auto p-5 text-sm leading-relaxed prose prose-invert prose-pre:bg-zinc-950 prose-pre:border prose-pre:border-zinc-800 prose-a:text-blue-400 max-w-none min-h-0">
                                 {loadingReview ? (
                                     <div className="flex flex-col items-center justify-center h-full text-zinc-500 gap-4">
                                         <div className="w-10 h-10 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
@@ -377,10 +377,10 @@ function Room() {
 
                         {/* TAB 2: REAL-TIME CHAT */}
                         {activeTab === "chat" && (
-                            <div className="flex-1 flex flex-col overflow-hidden bg-zinc-950/40 relative">
+                            <div className="flex-1 flex flex-col overflow-hidden bg-zinc-950/40 relative min-h-0">
 
                                 {/* Chat Message Stream */}
-                                <div className="flex-1 overflow-y-auto p-5 space-y-6 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
+                                <div className="flex-1 overflow-y-auto min-h-0 p-5 space-y-6 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
                                     {messages.length === 0 ? (
                                         <div className="h-full flex flex-col items-center justify-center text-center animate-in fade-in duration-700">
                                             <div className="w-20 h-20 mb-6 rounded-3xl bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700/50 shadow-xl flex items-center justify-center transform -rotate-6">
@@ -422,7 +422,7 @@ function Room() {
                                                     </div>
 
                                                     {/* Message Content */}
-                                                    <div className={`flex flex-col max-w-[75%] ${isMe ? 'items-end' : 'items-start'}`}>
+                                                    <div className={`flex flex-col max-w-[85%] sm:max-w-[75%] ${isMe ? 'items-end' : 'items-start'}`}>
                                                         <div className={`flex items-baseline gap-2 mb-1.5 px-1 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
                                                             <span className="text-[13px] font-semibold text-zinc-300">
                                                                 {isMe ? 'You' : msg.sender}

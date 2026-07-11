@@ -23,15 +23,45 @@ const roomSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    messages: [
+      {
+        sender: {
+          type: String,
+          required: true,
+        },
+
+        senderId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+
+        avatar: {
+          type: String,
+          default: "",
+        },
+
+        text: {
+          type: String,
+          required: true,
+        },
+
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+
     isActive: {
-        type: Boolean,
-        default: true,
-      },
-      
-      lastActivity: {
-        type: Date,
-        default: Date.now,
-      },
+      type: Boolean,
+      default: true,
+    },
+
+    lastActivity: {
+      type: Date,
+      default: Date.now,
+    },
   },
   {
     timestamps: true,

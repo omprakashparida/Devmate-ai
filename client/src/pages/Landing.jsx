@@ -28,6 +28,7 @@ function Landing() {
                     _id: response.data._id,
                     username: response.data.username,
                     email: response.data.email,
+                    avatar: response.data.avatar,
                 },
                 response.data.token
             );
@@ -51,7 +52,7 @@ function Landing() {
                     <div className="w-8 h-8 bg-zinc-100 text-zinc-950 flex items-center justify-center font-bold text-lg rounded-md">D</div>
                     <span className="text-xl font-bold text-white tracking-tight">DevMate</span>
                 </div>
-                
+
             </nav>
 
             {/* Spatial Hero Section */}
@@ -198,8 +199,16 @@ function Landing() {
             </section>
 
             {/* Footer */}
-            <footer className="relative z-10 border-t border-zinc-900 bg-zinc-950 py-8 text-center text-sm text-zinc-600">
-                <p>&copy; {new Date().getFullYear()} DevMate. Built for the modern web.</p>
+            <footer className="relative z-10 border-t border-zinc-900 bg-zinc-950 py-6">
+                <p className="text-center text-sm text-zinc-500">
+                    © {new Date().getFullYear()}{" "}
+                    <span className="font-medium text-zinc-300">
+                        DevMate AI
+                    </span>
+                    {" "}• Built with{" "}
+                    <span className="text-red-500">❤️</span>
+                    {" "}by a developer, for developers.
+                </p>
             </footer>
 
         </div>

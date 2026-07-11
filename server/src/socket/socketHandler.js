@@ -1,7 +1,10 @@
+import { saveMessage } from "../services/chatService.js";
+
 const roomUsers = {};
 
 const socketHandler = (io) => {
   io.on("connection", (socket) => {
+
     socket.on("join-room", (roomId) => {
       socket.join(roomId);
 
@@ -30,18 +33,6 @@ const socketHandler = (io) => {
     );
 
     socket.on(
-      "send-message",
-      ({ roomId, text }) => {
-        socket
-          .to(roomId)
-          .emit(
-            "receive-message",
-            text
-          );
-      }
-    );
-
-    socket.on(
       "language-change",
       ({ roomId, language }) => {
         socket
@@ -50,6 +41,45 @@ const socketHandler = (io) => {
             "receive-language",
             language
           );
+      }
+    );
+
+    // ⭐ Chat Persistence
+    socket.on(
+      "send-chat-message",
+      async ({
+        roomId,
+        sender,
+        senderId,
+        avatar,
+        message,
+      }) => {
+        try {
+
+          const savedMessage =
+            await saveMessage({
+              roomId,
+              sender,
+              senderId,
+              avatar,
+              message,
+            });
+
+          if (!savedMessage) {
+            return;
+          }
+
+          io.to(roomId).emit(
+            "receive-chat-message",
+            savedMessage
+          );
+
+        } catch (error) {
+          console.error(
+            "Error saving chat:",
+            error
+          );
+        }
       }
     );
 
@@ -80,27 +110,7 @@ const socketHandler = (io) => {
       );
     });
 
-    socket.on(
-      "send-chat-message",
-      ({ roomId, message, sender }) => {
-
-        io.to(roomId).emit(
-          "receive-chat-message",
-          {
-            sender,
-            message,
-            createdAt:
-              Date.now(),
-          }
-        );
-
-      }
-    );
-
-
   });
 };
-
-
 
 export default socketHandler;
